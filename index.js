@@ -21,6 +21,14 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   },
 });
+
+// database & collection
+
+const dbName = client.db("gadgetDB");
+
+const userCollection = dbName.collection("users");
+const productCollection = dbName.collection("products");
+
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
@@ -30,9 +38,28 @@ async function run() {
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
+
+    // insert user
+    app.post("/users", async (req, res) => {
+      const user = req.body;
+      console.log(user);
+      const query = { email: user.email };
+      console.log(query);
+      const existingUser = await userCollection.findOne(query);
+
+      if (existingUser) {
+        return res.send({ message: "this user already exists" });
+      }
+
+      const result = await userCollection.insertOne(user);
+
+      res.send(result);
+    });
+
+    //
   } finally {
     // Ensures that the client will close when you finish/error
-    await client.close();
+    // await client.close();
   }
 }
 run().catch(console.dir);
