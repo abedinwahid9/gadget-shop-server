@@ -6,7 +6,12 @@ require("dotenv").config();
 const app = express();
 const port = process.env.PORT || 4000;
 
-app.use(cors());
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    optionsSuccessStatus: 200,
+  })
+);
 app.use(express.json());
 
 // middleware
@@ -38,6 +43,14 @@ async function run() {
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
+
+    // get user
+    app.get("/user/:email", async (req, res) => {
+      const query = { email: req.params.email };
+      const user = await userCollection.findOne(query);
+
+      res.send(user);
+    });
 
     // insert user
     app.post("/users", async (req, res) => {
