@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion } = require("mongodb");
+const { emit } = require("nodemon");
 require("dotenv").config();
 const app = express();
 const port = process.env.PORT || 4000;
@@ -15,6 +16,34 @@ app.use(
 app.use(express.json());
 
 // middleware
+// verify JWT token
+const verifyToken = (req, res, next) => {
+  const authorization = req.headers.authorization;
+  if (!authorization) {
+    res.send({ message: "no token" });
+  }
+
+  const token = authorization.split(" ")[1];
+  jwt.verify(token, process.env.ACCESS_KEY_TOKEN, (err, decoded) => {
+    if (err) {
+      return res.send({ message: "invalid token" });
+    }
+    req.decoded = decoded;
+    next();
+  });
+};
+
+// verify seller
+const verifySeller = async (req, res, next) => {
+  const email = req.decoded.email;
+  const query = { email: email };
+  const user = await userCollection.find(query);
+
+  if (user.role !== "seller") {
+    return res.send({ message: "forbidden access" });
+  }
+  next();
+};
 
 // mongodb
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.os721gq.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
@@ -55,16 +84,21 @@ async function run() {
     // insert user
     app.post("/users", async (req, res) => {
       const user = req.body;
-      console.log(user);
       const query = { email: user.email };
-      console.log(query);
       const existingUser = await userCollection.findOne(query);
-
       if (existingUser) {
         return res.send({ message: "this user already exists" });
       }
 
       const result = await userCollection.insertOne(user);
+
+      res.send(result);
+    });
+
+    // add products
+    app.post("/add-products", verifyToken, verifyToken, async (req, res) => {
+      const product = req.body;
+      const result = await productCollection.insertOne(product);
 
       res.send(result);
     });
